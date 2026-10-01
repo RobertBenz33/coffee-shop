@@ -1,0 +1,113 @@
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+enum IngredientType {
+    SYRUP
+    TOPPING
+}
+
+enum OrderStatus {
+    PENDING
+    PAID
+}
+
+model Drink {
+    id        String   @id @default(cuid())
+    name      String
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    sizes DrinkSize[]
+}
+
+model Size {
+    id        String   @id @default(cuid())
+    name      String
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    drinks DrinkSize[]
+}
+
+model DrinkSize {
+    id      String  @id @default(cuid())
+    drinkId String
+    sizeId  String
+    price   Decimal @db.Decimal(10, 2)
+
+    drink Drink @relation(fields: [drinkId], references: [id], onDelete: Cascade)
+    size  Size  @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([drinkId, sizeId])
+}
+
+model Ingredient {
+    id        String         @id @default(cuid())
+    name      String
+    type      IngredientType
+    price     Decimal        @db.Decimal(10, 2)
+    isActive  Boolean        @default(true)
+    createdAt DateTime       @default(now())
+    updatedAt DateTime       @updatedAt
+}
+
+model Order {
+    id           String      @id @default(cuid())
+    customerName String
+    status       OrderStatus @default(PENDING)
+
+    totalPrice Decimal @db.Decimal(10, 2)
+
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    paidAt    DateTime?
+
+    items OrderItem[]
+}
+
+model OrderItem {
+    id      String @id @default(cuid())
+    orderId String
+
+    // Snapshot ของสินค้า ณ ตอนสั่งซื้อ
+    drinkName String
+    sizeName  String
+
+    // ราคาของ Drink + Size ณ ตอนสั่งซื้อ
+    unitPrice Decimal @db.Decimal(10, 2)
+
+    order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    ingredients OrderItemIngredient[]
+
+    createdAt DateTime @default(now())
+}
+
+model OrderItemIngredient {
+    id          String @id @default(cuid())
+    orderItemId String
+
+    // Snapshot ของ ingredient ณ ตอนสั่งซื้อ
+    ingredientName String
+    ingredientType IngredientType
+
+    quantity Int @default(1)
+
+    // ราคาต่อชิ้น ณ ตอนสั่งซื้อ
+    unitPrice Decimal @db.Decimal(10, 2)
+
+    orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+}
